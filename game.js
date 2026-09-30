@@ -1,15 +1,16 @@
 // ========================================================
-// VORTEX // Solid Collision Physics + P2P WebRTC 1v1 Engine
+// VORTEX // Hybrid Engine: Moving Bots + 1v1 P2P Multiplayer
 // ========================================================
 
 let scene, camera, renderer, clock;
 let isGameRunning = false;
 let isAiming = false;
 let isPointerLocked = false;
+let gameMode = 'single'; // 'single' or 'multiplayer'
 
-// Player Physics & State
+// Player State
 const player = {
-  pos: new THREE.Vector3(0, 2, 20),
+  pos: new THREE.Vector3(0, 2, 25),
   vel: new THREE.Vector3(0, 0, 0),
   rot: new THREE.Euler(0, 0, 0, 'YXZ'),
   radius: 0.6,
@@ -26,22 +27,20 @@ const GRAVITY = 32;
 const JUMP_FORCE = 11;
 const keys = { w: false, a: false, s: false, d: false };
 
-// Solid Colliders Array
+// Colliders & Bots
 const solidBoxes = [];
+const bots = [];
 
-// Multiplayer State (PeerJS P2P)
+// 1v1 PeerJS P2P State
 let peer = null;
 let peerConn = null;
-let isMultiplayer = false;
 let remotePlayerMesh = null;
-let remotePlayerState = { pos: new THREE.Vector3(0, 2, -20), rotY: 0, hp: 100 };
+let remotePlayerState = { pos: new THREE.Vector3(0, 2, -25), rotY: 0 };
 
 // Weapon Visuals
 let rifleGroup, muzzleLight;
 
-// ========================================================
-// 1. Initializer & Arena Setup
-// ========================================================
+// 1. Initializer
 function initEngine() {
   const container = document.getElementById('gameViewport');
 
@@ -72,6 +71,7 @@ function initEngine() {
   buildSolidArena();
   buildAssaultRifle();
   buildRemotePlayerModel();
+  spawnAIBots(); // BOTS SPAWN KAREIN
   bindControls();
   initPeerNetworking();
 
@@ -82,11 +82,8 @@ function initEngine() {
   });
 }
 
-// ========================================================
-// 2. Solid Arena & Collision Bounds Registration
-// ========================================================
+// 2. Arena with Solid Walls
 function buildSolidArena() {
-  // Ground
   const floorGeo = new THREE.PlaneGeometry(240, 240);
   const floorMat = new THREE.MeshStandardMaterial({ color: 0xdfd2be, roughness: 0.9 });
   const floor = new THREE.Mesh(floorGeo, floorMat);
@@ -94,11 +91,9 @@ function buildSolidArena() {
   floor.receiveShadow = true;
   scene.add(floor);
 
-  // Concrete Material
   const wallMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.6 });
   const coverMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.4 });
 
-  // Helper to add Solid Objects with Collision Bounds
   function addSolidBox(size, pos, mat) {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(...size), mat);
     mesh.position.set(...pos);
@@ -106,64 +101,143 @@ function buildSolidArena() {
     mesh.receiveShadow = true;
     scene.add(mesh);
 
-    // Compute bounding box for collision detection
     const box = new THREE.Box3();
     box.setFromObject(mesh);
     solidBoxes.push(box);
   }
 
-  // 4 Outer Perimeter Boundary Walls
+  // Perimeter Walls
   addSolidBox([220, 10, 4], [0, 5, -110], wallMat);
   addSolidBox([220, 10, 4], [0, 5, 110], wallMat);
   addSolidBox([4, 10, 220], [-110, 5, 0], wallMat);
   addSolidBox([4, 10, 220], [110, 5, 0], wallMat);
 
-  // Tactical Covers (Boxes player CANNOT walk through)
+  // Cover Bunkers
   const coverList = [
     { size: [6, 4, 3], pos: [-12, 2, -12] },
     { size: [6, 4, 3], pos: [12, 2, -12] },
     { size: [6, 4, 3], pos: [-12, 2, 12] },
     { size: [6, 4, 3], pos: [12, 2, 12] },
-    { size: [10, 5, 4], pos: [0, 2.5, 0] },     // Center bunker
+    { size: [10, 5, 4], pos: [0, 2.5, 0] },
     { size: [4, 4, 12], pos: [-35, 2, 0] },
     { size: [4, 4, 12], pos: [35, 2, 0] }
   ];
-
   coverList.forEach(c => addSolidBox(c.size, c.pos, coverMat));
 }
 
-// ========================================================
-// 3. Remote Rival Player Model (1v1 Opponent)
-// ========================================================
+// 3. AI Bots
+function spawnAIBots() {
+  const botSpawns = [
+    [-18, 0, -30], [18, 0, -30], [0, 0, -45],
+    [-28, 0, 5], [28, 0, 5]
+  ];
+
+  botSpawns.forEach((spawn, idx) => {
+    const botGroup = new THREE.Group();
+    botGroup.position.set(...spawn);
+
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.5 });
+    const limbMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.6 });
+
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 0.4), bodyMat);
+    torso.position.y = 1.6;
+    botGroup.add(torso);
+
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 16), new THREE.MeshStandardMaterial({ color: 0xffedd5 }));
+    head.position.y = 2.45;
+    botGroup.add(head);
+
+    const leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.9, 0.28), limbMat);
+    leftLeg.position.set(-0.25, 0.5, 0);
+    botGroup.add(leftLeg);
+
+    const rightLeg = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.9, 0.28), limbMat);
+    rightLeg.position.set(0.25, 0.5, 0);
+    botGroup.add(rightLeg);
+
+    botGroup.userData = {
+      id: idx,
+      hp: 100,
+      alive: true,
+      speed: 4.5,
+      patrolTarget: getRandomPoint(),
+      leftLeg, rightLeg,
+      walkCycle: Math.random() * Math.PI,
+      lastShotTime: 0
+    };
+
+    scene.add(botGroup);
+    bots.push(botGroup);
+  });
+}
+
+function getRandomPoint() {
+  return new THREE.Vector3((Math.random() - 0.5) * 120, 0, (Math.random() - 0.5) * 120);
+}
+
+function updateBots(delta) {
+  if (!isGameRunning || gameMode !== 'single') return;
+
+  const now = performance.now();
+
+  bots.forEach(bot => {
+    if (!bot.userData.alive) return;
+    const data = bot.userData;
+    const distToPlayer = bot.position.distanceTo(player.pos);
+
+    let targetPos = distToPlayer < 40 ? player.pos : data.patrolTarget;
+
+    if (distToPlayer >= 40 && bot.position.distanceTo(data.patrolTarget) < 4) {
+      data.patrolTarget = getRandomPoint();
+      targetPos = data.patrolTarget;
+    }
+
+    const dir = new THREE.Vector3().subVectors(targetPos, bot.position);
+    dir.y = 0;
+    dir.normalize();
+    bot.lookAt(targetPos.x, bot.position.y, targetPos.z);
+
+    if (distToPlayer > 6) {
+      bot.position.addScaledVector(dir, data.speed * delta);
+      data.walkCycle += delta * data.speed * 2.5;
+      data.leftLeg.rotation.x = Math.sin(data.walkCycle) * 0.6;
+      data.rightLeg.rotation.x = -Math.sin(data.walkCycle) * 0.6;
+    }
+
+    // Bot shoots at player
+    if (distToPlayer < 35 && now - data.lastShotTime > 1300) {
+      data.lastShotTime = now;
+      if (Math.random() > 0.4) {
+        player.health = Math.max(0, player.health - 12);
+        updatePlayerHUD();
+        if (player.health <= 0) {
+          const redScore = document.getElementById('redScore');
+          redScore.innerText = parseInt(redScore.innerText) + 1;
+          respawnPlayer();
+        }
+      }
+    }
+  });
+}
+
+// 4. Remote Player Model (Dost ka model)
 function buildRemotePlayerModel() {
   remotePlayerMesh = new THREE.Group();
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x0284c7 }); // Rival in blue/red
 
-  const bodyMat = new THREE.MeshStandardMaterial({ color: 0xe11d48 }); // Red Rival
-  const darkMat = new THREE.MeshStandardMaterial({ color: 0x0f172a });
-
-  // Torso
   const torso = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 0.4), bodyMat);
   torso.position.y = 1.6;
   remotePlayerMesh.add(torso);
 
-  // Head
   const head = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 16), new THREE.MeshStandardMaterial({ color: 0xffedd5 }));
   head.position.y = 2.45;
   remotePlayerMesh.add(head);
 
-  // Gun
-  const gun = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.6), darkMat);
-  gun.position.set(0.45, 1.4, -0.4);
-  remotePlayerMesh.add(gun);
-
-  remotePlayerMesh.position.set(0, 0, -20);
   remotePlayerMesh.visible = false;
   scene.add(remotePlayerMesh);
 }
 
-// ========================================================
-// 4. Solid AABB Collision Resolution Algorithm
-// ========================================================
+// 5. Solid Collision Algorithm
 function resolveCollisions(newPos) {
   const pMinX = newPos.x - player.radius;
   const pMaxX = newPos.x + player.radius;
@@ -172,18 +246,13 @@ function resolveCollisions(newPos) {
 
   for (let i = 0; i < solidBoxes.length; i++) {
     const box = solidBoxes[i];
-
-    // Check overlap on X and Z axis
     if (pMaxX > box.min.x && pMinX < box.max.x &&
         pMaxZ > box.min.z && pMinZ < box.max.z &&
         newPos.y < box.max.y) {
-
-      // Determine shallowest penetration axis to push player back
       const dx1 = box.max.x - pMinX;
       const dx2 = pMaxX - box.min.x;
       const dz1 = box.max.z - pMinZ;
       const dz2 = pMaxZ - box.min.z;
-
       const minX = Math.min(dx1, dx2);
       const minZ = Math.min(dz1, dz2);
 
@@ -196,9 +265,7 @@ function resolveCollisions(newPos) {
   }
 }
 
-// ========================================================
-// 5. Weapon & Shooting Mechanics
-// ========================================================
+// 6. Weapon & Shooting
 function buildAssaultRifle() {
   rifleGroup = new THREE.Group();
   const gunMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3, metalness: 0.85 });
@@ -230,26 +297,44 @@ function fireWeapon() {
   player.ammo--;
   document.getElementById('ammoCurrent').innerText = player.ammo;
 
-  // Recoil
   rifleGroup.position.z += 0.08;
   setTimeout(() => rifleGroup.position.z = isAiming ? -0.38 : -0.55, 70);
 
   muzzleLight.intensity = 5;
   setTimeout(() => muzzleLight.intensity = 0, 40);
 
-  // Send Shoot Event to Rival
-  if (peerConn && peerConn.open) {
-    peerConn.send({ type: 'shoot' });
+  const raycaster = new THREE.Raycaster();
+  raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+
+  // Single Mode: Raycast Bot hits
+  if (gameMode === 'single') {
+    const hitCandidates = [];
+    bots.forEach(b => { if (b.userData.alive) b.children.forEach(c => hitCandidates.push(c)); });
+    const intersects = raycaster.intersectObjects(hitCandidates, false);
+    if (intersects.length > 0) {
+      const hitBot = intersects[0].object.parent;
+      if (hitBot && hitBot.userData.alive) {
+        hitBot.userData.hp -= 34;
+        if (hitBot.userData.hp <= 0) {
+          hitBot.userData.alive = false;
+          hitBot.position.y = -20;
+          const blueScore = document.getElementById('blueScore');
+          blueScore.innerText = parseInt(blueScore.innerText) + 1;
+          setTimeout(() => {
+            hitBot.userData.hp = 100;
+            hitBot.userData.alive = true;
+            const pt = getRandomPoint();
+            hitBot.position.set(pt.x, 0, pt.z);
+          }, 3000);
+        }
+      }
+    }
   }
 
-  // Raycast Hit Check on Remote Player
-  if (isMultiplayer && remotePlayerMesh.visible) {
-    const raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-
+  // 1v1 Mode: Raycast Remote Player
+  if (gameMode === 'multiplayer' && remotePlayerMesh.visible) {
     const hit = raycaster.intersectObjects(remotePlayerMesh.children, false);
-    if (hit.length > 0) {
-      // Hit rival!
+    if (hit.length > 0 && peerConn && peerConn.open) {
       peerConn.send({ type: 'hit', damage: 34 });
     }
   }
@@ -269,11 +354,8 @@ function reloadWeapon() {
   }, 1200);
 }
 
-// ========================================================
-// 6. PeerJS Direct 1v1 P2P Networking
-// ========================================================
+// 7. P2P 1v1 Networking
 function initPeerNetworking() {
-  // Generate random 4-digit room code
   const code = 'VORTEX-' + Math.floor(1000 + Math.random() * 9000);
   peer = new Peer(code);
 
@@ -281,37 +363,36 @@ function initPeerNetworking() {
     document.getElementById('myPeerId').value = id;
   });
 
-  // When friend connects to us
   peer.on('connection', conn => {
     peerConn = conn;
     setupNetworkListeners();
-    startBattleSession();
+    startBattle('multiplayer');
   });
 }
 
 function copyMyId() {
   const field = document.getElementById('myPeerId');
   navigator.clipboard.writeText(field.value);
-  alert('Room ID copied! Send this to your friend.');
+  alert('Room ID copied! Send to your friend.');
 }
 
 function joinFriend() {
   const friendId = document.getElementById('friendPeerId').value.trim();
   if (!friendId) { alert('Enter Friend Room ID!'); return; }
-
   peerConn = peer.connect(friendId);
   setupNetworkListeners();
-  startBattleSession();
+  startBattle('multiplayer');
 }
 
 function setupNetworkListeners() {
   peerConn.on('open', () => {
-    isMultiplayer = true;
     remotePlayerMesh.visible = true;
     document.getElementById('connectionStatus').innerText = '1v1 LIVE';
     document.getElementById('connectionStatus').style.color = '#10b981';
 
-    // Broadcast our position every 30ms (33 FPS network tick)
+    // Hide bots during 1v1 match
+    bots.forEach(b => b.visible = false);
+
     setInterval(() => {
       if (peerConn && peerConn.open && isGameRunning) {
         peerConn.send({
@@ -328,27 +409,23 @@ function setupNetworkListeners() {
       remotePlayerState.pos.set(data.pos.x, data.pos.y, data.pos.z);
       remotePlayerState.rotY = data.rotY;
     } else if (data.type === 'hit') {
-      // We were hit by friend
       player.health = Math.max(0, player.health - data.damage);
-      document.getElementById('hpText').innerText = player.health;
-      document.getElementById('hpBar').style.width = player.health + '%';
-
+      updatePlayerHUD();
       if (player.health <= 0) {
-        // Friend gets point
         const redScore = document.getElementById('redScore');
         redScore.innerText = parseInt(redScore.innerText) + 1;
         peerConn.send({ type: 'died' });
         respawnPlayer();
       }
     } else if (data.type === 'died') {
-      // We eliminated friend
       const blueScore = document.getElementById('blueScore');
       blueScore.innerText = parseInt(blueScore.innerText) + 1;
     }
   });
 }
 
-function startBattleSession() {
+function startBattle(mode) {
+  gameMode = mode;
   document.getElementById('lobbyScreen').style.display = 'none';
   document.getElementById('gameHUD').style.display = 'flex';
   isGameRunning = true;
@@ -356,20 +433,22 @@ function startBattleSession() {
 }
 
 function startSinglePractice() {
-  startBattleSession();
+  startBattle('single');
 }
 
 function respawnPlayer() {
   player.health = 100;
-  player.pos.set((Math.random() - 0.5) * 40, 2, 35);
+  player.pos.set((Math.random() - 0.5) * 40, 2, 25);
   camera.position.copy(player.pos);
-  document.getElementById('hpText').innerText = '100';
-  document.getElementById('hpBar').style.width = '100%';
+  updatePlayerHUD();
 }
 
-// ========================================================
-// 7. Physics, Collision & Input Loop
-// ========================================================
+function updatePlayerHUD() {
+  document.getElementById('hpText').innerText = player.health;
+  document.getElementById('hpBar').style.width = player.health + '%';
+}
+
+// 8. Controls
 function bindControls() {
   window.addEventListener('keydown', e => {
     if (e.code === 'KeyW') keys.w = true;
@@ -388,17 +467,23 @@ function bindControls() {
   });
 
   const vp = document.getElementById('gameViewport');
-  vp.addEventListener('click', () => { if (isGameRunning) vp.requestPointerLock(); });
+  vp.addEventListener('click', () => { 
+    if (isGameRunning && !isPointerLocked) vp.requestPointerLock(); 
+  });
+
+  document.addEventListener('pointerlockchange', () => {
+    isPointerLocked = (document.pointerLockElement === vp);
+  });
 
   window.addEventListener('mousemove', e => {
-    if (document.pointerLockElement !== vp) return;
+    if (!isPointerLocked) return;
     player.rot.y -= e.movementX * 0.0022;
     player.rot.x -= e.movementY * 0.0022;
     player.rot.x = Math.max(-1.4, Math.min(1.4, player.rot.x));
   });
 
   window.addEventListener('mousedown', e => {
-    if (document.pointerLockElement !== vp) return;
+    if (!isPointerLocked) return;
     if (e.button === 0) fireWeapon();
   });
 
@@ -430,16 +515,13 @@ function updatePhysics(delta) {
   player.vel.z = moveDir.z * MOVE_SPEED;
   player.vel.y -= GRAVITY * delta;
 
-  // Predict new intended position
   const nextPos = player.pos.clone();
   nextPos.x += player.vel.x * delta;
   nextPos.z += player.vel.z * delta;
   nextPos.y += player.vel.y * delta;
 
-  // Solid Collision Resolution Against Boxes
   resolveCollisions(nextPos);
 
-  // Ground check
   if (nextPos.y <= 2) {
     nextPos.y = 2;
     player.vel.y = 0;
@@ -449,8 +531,7 @@ function updatePhysics(delta) {
   player.pos.copy(nextPos);
   camera.position.copy(player.pos);
 
-  // Interpolate Remote Rival Position
-  if (remotePlayerMesh && remotePlayerMesh.visible) {
+  if (gameMode === 'multiplayer' && remotePlayerMesh && remotePlayerMesh.visible) {
     remotePlayerMesh.position.lerp(remotePlayerState.pos, 0.3);
     remotePlayerMesh.rotation.y = remotePlayerState.rotY;
   }
@@ -460,6 +541,7 @@ function animate() {
   requestAnimationFrame(animate);
   const delta = clock.getDelta();
   updatePhysics(delta);
+  updateBots(delta);
   renderer.render(scene, camera);
 }
 
