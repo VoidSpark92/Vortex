@@ -40,7 +40,9 @@ let remotePlayerState = { pos: new THREE.Vector3(0, 2, -25), rotY: 0 };
 // Weapon Visuals
 let rifleGroup, muzzleLight;
 
+// ========================================================
 // 1. Initializer
+// ========================================================
 function initEngine() {
   const container = document.getElementById('gameViewport');
 
@@ -71,7 +73,7 @@ function initEngine() {
   buildSolidArena();
   buildAssaultRifle();
   buildRemotePlayerModel();
-  spawnAIBots(); // BOTS SPAWN KAREIN
+  spawnAIBots();
   bindControls();
   initPeerNetworking();
 
@@ -82,7 +84,9 @@ function initEngine() {
   });
 }
 
+// ========================================================
 // 2. Arena with Solid Walls
+// ========================================================
 function buildSolidArena() {
   const floorGeo = new THREE.PlaneGeometry(240, 240);
   const floorMat = new THREE.MeshStandardMaterial({ color: 0xdfd2be, roughness: 0.9 });
@@ -125,7 +129,9 @@ function buildSolidArena() {
   coverList.forEach(c => addSolidBox(c.size, c.pos, coverMat));
 }
 
+// ========================================================
 // 3. AI Bots
+// ========================================================
 function spawnAIBots() {
   const botSpawns = [
     [-18, 0, -30], [18, 0, -30], [0, 0, -45],
@@ -212,7 +218,7 @@ function updateBots(delta) {
         updatePlayerHUD();
         if (player.health <= 0) {
           const redScore = document.getElementById('redScore');
-          redScore.innerText = parseInt(redScore.innerText) + 1;
+          if (redScore) redScore.innerText = parseInt(redScore.innerText) + 1;
           respawnPlayer();
         }
       }
@@ -220,10 +226,12 @@ function updateBots(delta) {
   });
 }
 
+// ========================================================
 // 4. Remote Player Model (Dost ka model)
+// ========================================================
 function buildRemotePlayerModel() {
   remotePlayerMesh = new THREE.Group();
-  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x0284c7 }); // Rival in blue/red
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x0284c7 });
 
   const torso = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 0.4), bodyMat);
   torso.position.y = 1.6;
@@ -237,7 +245,9 @@ function buildRemotePlayerModel() {
   scene.add(remotePlayerMesh);
 }
 
+// ========================================================
 // 5. Solid Collision Algorithm
+// ========================================================
 function resolveCollisions(newPos) {
   const pMinX = newPos.x - player.radius;
   const pMaxX = newPos.x + player.radius;
@@ -265,7 +275,9 @@ function resolveCollisions(newPos) {
   }
 }
 
+// ========================================================
 // 6. Weapon & Shooting
+// ========================================================
 function buildAssaultRifle() {
   rifleGroup = new THREE.Group();
   const gunMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3, metalness: 0.85 });
@@ -295,7 +307,8 @@ function fireWeapon() {
   if (player.ammo <= 0) { reloadWeapon(); return; }
 
   player.ammo--;
-  document.getElementById('ammoCurrent').innerText = player.ammo;
+  const ammoElem = document.getElementById('ammoCurrent');
+  if (ammoElem) ammoElem.innerText = player.ammo;
 
   rifleGroup.position.z += 0.08;
   setTimeout(() => rifleGroup.position.z = isAiming ? -0.38 : -0.55, 70);
@@ -319,7 +332,7 @@ function fireWeapon() {
           hitBot.userData.alive = false;
           hitBot.position.y = -20;
           const blueScore = document.getElementById('blueScore');
-          blueScore.innerText = parseInt(blueScore.innerText) + 1;
+          if (blueScore) blueScore.innerText = parseInt(blueScore.innerText) + 1;
           setTimeout(() => {
             hitBot.userData.hp = 100;
             hitBot.userData.alive = true;
@@ -332,7 +345,7 @@ function fireWeapon() {
   }
 
   // 1v1 Mode: Raycast Remote Player
-  if (gameMode === 'multiplayer' && remotePlayerMesh.visible) {
+  if (gameMode === 'multiplayer' && remotePlayerMesh && remotePlayerMesh.visible) {
     const hit = raycaster.intersectObjects(remotePlayerMesh.children, false);
     if (hit.length > 0 && peerConn && peerConn.open) {
       peerConn.send({ type: 'hit', damage: 34 });
@@ -343,24 +356,28 @@ function fireWeapon() {
 function reloadWeapon() {
   if (player.isReloading || player.ammo === player.maxAmmo) return;
   player.isReloading = true;
-  document.getElementById('ammoCurrent').innerText = '--';
+  const ammoElem = document.getElementById('ammoCurrent');
+  if (ammoElem) ammoElem.innerText = '--';
   rifleGroup.position.y -= 0.2;
 
   setTimeout(() => {
     player.ammo = player.maxAmmo;
     player.isReloading = false;
     rifleGroup.position.y = -0.25;
-    document.getElementById('ammoCurrent').innerText = player.ammo;
+    if (ammoElem) ammoElem.innerText = player.ammo;
   }, 1200);
 }
 
+// ========================================================
 // 7. P2P 1v1 Networking
+// ========================================================
 function initPeerNetworking() {
   const code = 'VORTEX-' + Math.floor(1000 + Math.random() * 9000);
   peer = new Peer(code);
 
   peer.on('open', id => {
-    document.getElementById('myPeerId').value = id;
+    const myPeerElem = document.getElementById('myPeerId');
+    if (myPeerElem) myPeerElem.value = id;
   });
 
   peer.on('connection', conn => {
@@ -372,8 +389,9 @@ function initPeerNetworking() {
 
 function copyMyId() {
   const field = document.getElementById('myPeerId');
+  if (!field) return;
   navigator.clipboard.writeText(field.value);
-  alert('Room ID copied! Send to your friend.');
+  alert('Room ID copied! Send this to your friend.');
 }
 
 function joinFriend() {
@@ -386,9 +404,12 @@ function joinFriend() {
 
 function setupNetworkListeners() {
   peerConn.on('open', () => {
-    remotePlayerMesh.visible = true;
-    document.getElementById('connectionStatus').innerText = '1v1 LIVE';
-    document.getElementById('connectionStatus').style.color = '#10b981';
+    if (remotePlayerMesh) remotePlayerMesh.visible = true;
+    const statusElem = document.getElementById('connectionStatus');
+    if (statusElem) {
+      statusElem.innerText = '1v1 LIVE';
+      statusElem.style.color = '#10b981';
+    }
 
     // Hide bots during 1v1 match
     bots.forEach(b => b.visible = false);
@@ -413,23 +434,46 @@ function setupNetworkListeners() {
       updatePlayerHUD();
       if (player.health <= 0) {
         const redScore = document.getElementById('redScore');
-        redScore.innerText = parseInt(redScore.innerText) + 1;
+        if (redScore) redScore.innerText = parseInt(redScore.innerText) + 1;
         peerConn.send({ type: 'died' });
         respawnPlayer();
       }
     } else if (data.type === 'died') {
       const blueScore = document.getElementById('blueScore');
-      blueScore.innerText = parseInt(blueScore.innerText) + 1;
+      if (blueScore) blueScore.innerText = parseInt(blueScore.innerText) + 1;
     }
   });
 }
 
+// ========================================================
+// 8. Start Battle & Force Hide Lobby (FIXED)
+// ========================================================
 function startBattle(mode) {
   gameMode = mode;
-  document.getElementById('lobbyScreen').style.display = 'none';
-  document.getElementById('gameHUD').style.display = 'flex';
+
+  // 1. Force hide lobby wrapper completely
+  const lobby = document.getElementById('lobbyScreen');
+  if (lobby) {
+    lobby.style.setProperty('display', 'none', 'important');
+    lobby.style.visibility = 'hidden';
+    lobby.style.pointerEvents = 'none';
+  }
+
+  // 2. Force show in-game HUD
+  const hud = document.getElementById('gameHUD');
+  if (hud) {
+    hud.style.setProperty('display', 'flex', 'important');
+    hud.style.visibility = 'visible';
+    hud.style.pointerEvents = 'none';
+  }
+
   isGameRunning = true;
-  if (!('ontouchstart' in window)) document.getElementById('gameViewport').requestPointerLock();
+
+  // Pointer lock on PC
+  if (!('ontouchstart' in window)) {
+    const vp = document.getElementById('gameViewport');
+    if (vp) vp.requestPointerLock();
+  }
 }
 
 function startSinglePractice() {
@@ -444,11 +488,15 @@ function respawnPlayer() {
 }
 
 function updatePlayerHUD() {
-  document.getElementById('hpText').innerText = player.health;
-  document.getElementById('hpBar').style.width = player.health + '%';
+  const hpText = document.getElementById('hpText');
+  const hpBar = document.getElementById('hpBar');
+  if (hpText) hpText.innerText = player.health;
+  if (hpBar) hpBar.style.width = player.health + '%';
 }
 
-// 8. Controls
+// ========================================================
+// 9. Controls
+// ========================================================
 function bindControls() {
   window.addEventListener('keydown', e => {
     if (e.code === 'KeyW') keys.w = true;
@@ -487,9 +535,13 @@ function bindControls() {
     if (e.button === 0) fireWeapon();
   });
 
-  document.getElementById('btnFire').addEventListener('touchstart', (e) => { e.preventDefault(); fireWeapon(); });
-  document.getElementById('btnReload').addEventListener('touchstart', (e) => { e.preventDefault(); reloadWeapon(); });
-  document.getElementById('btnJump').addEventListener('touchstart', (e) => {
+  const btnFire = document.getElementById('btnFire');
+  const btnReload = document.getElementById('btnReload');
+  const btnJump = document.getElementById('btnJump');
+
+  if (btnFire) btnFire.addEventListener('touchstart', (e) => { e.preventDefault(); fireWeapon(); });
+  if (btnReload) btnReload.addEventListener('touchstart', (e) => { e.preventDefault(); reloadWeapon(); });
+  if (btnJump) btnJump.addEventListener('touchstart', (e) => {
     e.preventDefault();
     if (player.onGround) { player.vel.y = JUMP_FORCE; player.onGround = false; }
   });
