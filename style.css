@@ -1,219 +1,46 @@
-/* ========================================================
-   Vortex Strike - Bright Daylight Modern Aesthetic
-   ======================================================== */
-
-* {
-  margin: 0; padding: 0; box-sizing: border-box;
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  user-select: none;
-  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+/* P2P Multiplayer Room Boxes */
+.p2p-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 22px;
+  background: #f1f5f9;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid #cbd5e1;
 }
-
-body, html {
-  width: 100%; height: 100%;
-  overflow: hidden;
-  background: #e2e8f0; /* Soft light backdrop */
+.room-box label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #475569;
+  text-align: left;
+  margin-bottom: 5px;
+}
+.copy-row, .join-row {
+  display: flex;
+  gap: 8px;
+}
+.copy-row input, .join-row input {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  font-size: 0.85rem;
+  font-family: monospace;
+  font-weight: bold;
   color: #0f172a;
 }
-
-#gameViewport {
-  position: absolute; top: 0; left: 0;
-  width: 100vw; height: 100vh;
-  z-index: 1;
+.copy-row button, .join-row button {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: none;
+  background: #0284c7;
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
 }
-
-/* Crosshair for PC */
-.crosshair {
-  position: absolute; top: 50%; left: 50%;
-  width: 10px; height: 10px;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-}
-.crosshair::before, .crosshair::after {
-  content: ''; position: absolute; background: #0284c7;
-}
-.crosshair::before { top: 4px; left: -10px; width: 30px; height: 2px; }
-.crosshair::after { top: -10px; left: 4px; width: 2px; height: 30px; }
-
-/* In-Game HUD Overlay */
-.hud-overlay {
-  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-  z-index: 10; pointer-events: none;
-  display: flex; flex-direction: column; justify-content: space-between;
-  padding: 16px;
-}
-
-/* Match Score Header */
-.hud-top {
-  display: flex; justify-content: center; align-items: center; gap: 20px;
-}
-.team-score, .match-timer {
-  background: rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  padding: 8px 18px; border-radius: 20px;
-  font-weight: 800; font-size: 0.95rem;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-  backdrop-filter: blur(8px);
-}
-.blue-team { color: #0284c7; }
-.red-team { color: #e11d48; }
-.match-timer { color: #0f172a; }
-
-/* Health & Ammo Cards */
-.hud-bottom-stats {
-  display: flex; justify-content: space-between; align-items: flex-end;
-}
-.health-card, .ammo-card {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 14px; padding: 12px 18px;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.06);
-  backdrop-filter: blur(10px);
-}
-.stat-label {
-  font-size: 0.7rem; font-weight: 800; color: #64748b; letter-spacing: 1px;
-  display: block; margin-bottom: 4px;
-}
-.health-bar-bg {
-  width: 160px; height: 10px; background: #e2e8f0;
-  border-radius: 5px; overflow: hidden; margin-bottom: 4px;
-}
-.health-bar-fill {
-  width: 100%; height: 100%;
-  background: linear-gradient(90deg, #10b981, #059669);
-  transition: width 0.2s ease;
-}
-.stat-num { font-size: 1.1rem; font-weight: 900; color: #0f172a; }
-
-.ammo-display { display: flex; align-items: baseline; gap: 4px; }
-.ammo-current { font-size: 1.6rem; font-weight: 900; color: #0284c7; }
-.ammo-divider, .ammo-reserve { font-size: 1rem; color: #64748b; font-weight: 700; }
-
-/* Mobile Touch Controls Layer */
-.mobile-hud {
-  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-  pointer-events: none;
-}
-.hud-element {
-  position: absolute; pointer-events: auto; touch-action: none;
-}
-
-/* Touch Joystick */
-#touchJoystick {
-  bottom: 40px; left: 40px;
-}
-.joystick-base {
-  width: 120px; height: 120px;
-  background: rgba(255, 255, 255, 0.4);
-  border: 2px solid rgba(2, 132, 199, 0.4);
-  border-radius: 50%; position: relative;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-}
-.joystick-knob {
-  width: 50px; height: 50px;
-  background: #0284c7; border-radius: 50%;
-  position: absolute; top: 35px; left: 35px;
-  box-shadow: 0 4px 10px rgba(2, 132, 199, 0.4);
-}
-
-/* Action Buttons */
-.action-touch-btn {
-  width: 60px; height: 60px; border-radius: 50%;
-  background: rgba(255, 255, 255, 0.85);
-  border: 2px solid rgba(2, 132, 199, 0.3);
-  font-size: 1.4rem; color: #0f172a;
-  display: flex; justify-content: center; align-items: center;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-}
-.action-touch-btn:active {
-  background: #0284c7; color: #fff; transform: scale(0.95);
-}
-
-#btnFire { bottom: 60px; right: 40px; width: 75px; height: 75px; border-color: #e11d48; }
-#btnAim { bottom: 150px; right: 40px; }
-#btnJump { bottom: 60px; right: 130px; }
-#btnReload { bottom: 150px; right: 120px; font-size: 1.1rem; }
-
-/* Custom HUD Editor Bar */
-.editor-modal {
-  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-  z-index: 50; background: rgba(241, 245, 249, 0.5); backdrop-filter: blur(4px);
-}
-.editor-bar {
-  position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
-  background: #ffffff; border: 1px solid #cbd5e1;
-  padding: 10px 24px; border-radius: 30px;
-  display: flex; gap: 20px; align-items: center;
-  font-weight: 700; color: #0f172a; font-size: 0.85rem;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-}
-.btn-clean {
-  background: #f1f5f9; border: 1px solid #cbd5e1;
-  padding: 6px 14px; border-radius: 20px; cursor: pointer; font-weight: bold;
-}
-.btn-save {
-  background: #0284c7; border: none; color: #fff;
-  padding: 6px 16px; border-radius: 20px; cursor: pointer; font-weight: bold;
-}
-
-/* Main Lobby (Clean Daylight Theme) */
-.lobby-wrapper {
-  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-  z-index: 100; display: flex; justify-content: center; align-items: center;
-  background: radial-gradient(circle, #f8fafc 0%, #cbd5e1 100%);
-  padding: 20px;
-}
-.lobby-card {
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 24px; width: 100%; max-width: 540px;
-  padding: 36px 30px; text-align: center;
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.08);
-}
-.lobby-header h1 {
-  font-size: 2.2rem; font-weight: 900; letter-spacing: -1px;
-  color: #0f172a; margin-bottom: 6px;
-}
-.lobby-header p {
-  font-size: 0.85rem; color: #64748b; font-weight: 600; text-transform: uppercase;
-  margin-bottom: 26px;
-}
-
-.mode-selection {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 26px;
-}
-.mode-card {
-  background: #f8fafc; border: 2px solid #e2e8f0;
-  border-radius: 14px; padding: 14px 8px; cursor: pointer;
-  transition: all 0.2s ease;
-}
-.mode-card.active, .mode-card:hover {
-  border-color: #0284c7; background: #f0f9ff;
-}
-.mode-name { font-weight: 800; font-size: 0.85rem; color: #0f172a; }
-.mode-desc { font-size: 0.7rem; color: #64748b; margin-top: 4px; }
-
-.lobby-buttons-row {
-  display: flex; flex-direction: column; gap: 10px;
-}
-.btn-play {
-  width: 100%; padding: 14px; border: none; border-radius: 12px;
-  background: linear-gradient(135deg, #0284c7, #0369a1);
-  color: #fff; font-size: 1rem; font-weight: 800; letter-spacing: 1px;
-  cursor: pointer; box-shadow: 0 8px 20px rgba(2, 132, 199, 0.3);
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-.btn-play:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 25px rgba(2, 132, 199, 0.4);
-}
-.btn-secondary {
-  width: 100%; padding: 11px; border: 1px solid #cbd5e1;
-  background: #f8fafc; border-radius: 12px; font-weight: 700;
-  color: #334155; cursor: pointer;
-}
-
-.lobby-footer-note {
-  font-size: 0.75rem; color: #94a3b8; margin-top: 22px; line-height: 1.4;
+.copy-row button:hover, .join-row button:hover {
+  background: #0369a1;
 }
