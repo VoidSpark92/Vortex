@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Vortex Strike // Next-Gen Browser Shooter</title>
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Three.js Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+  <!-- 3D Canvas Viewport -->
+  <div id="gameViewport"></div>
+
+  <!-- PC In-Game Crosshair & HUD -->
+  <div id="gameHUD" class="hud-overlay" style="display: none;">
+    <div class="crosshair"></div>
+
+    <!-- Top Match Header -->
+    <div class="hud-top">
+      <div class="team-score blue-team">BLUE: <span id="blueScore">0</span></div>
+      <div class="match-timer" id="matchTimer">05:00</div>
+      <div class="team-score red-team">RED: <span id="redScore">0</span></div>
+    </div>
+
+    <!-- Health & Ammo Bars (Light Modern UI) -->
+    <div class="hud-bottom-stats">
+      <div class="health-card">
+        <span class="stat-label">HEALTH</span>
+        <div class="health-bar-bg">
+          <div class="health-bar-fill" id="hpBar"></div>
+        </div>
+        <span class="stat-num" id="hpText">100</span>
+      </div>
+
+      <div class="ammo-card">
+        <span class="stat-label">WEAPON // RIFLE</span>
+        <div class="ammo-display">
+          <span class="ammo-current" id="ammoCurrent">30</span>
+          <span class="ammo-divider">/</span>
+          <span class="ammo-reserve" id="ammoReserve">90</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Touch Controls Layer (Customizable) -->
+    <div id="mobileControlsLayer" class="mobile-hud">
+      <!-- Virtual Analog Joystick (Left Side) -->
+      <div id="touchJoystick" class="hud-element" data-id="joystick">
+        <div class="joystick-base">
+          <div class="joystick-knob" id="joystickKnob"></div>
+        </div>
+      </div>
+
+      <!-- Action Buttons (Right Side) -->
+      <button id="btnFire" class="hud-element action-touch-btn fire-touch" data-id="fire">🔥</button>
+      <button id="btnAim" class="hud-element action-touch-btn aim-touch" data-id="aim">🎯</button>
+      <button id="btnJump" class="hud-element action-touch-btn jump-touch" data-id="jump">⬆</button>
+      <button id="btnReload" class="hud-element action-touch-btn reload-touch" data-id="reload">🔄</button>
+    </div>
+  </div>
+
+  <!-- HUD Customization Mode Overlay -->
+  <div id="hudEditorModal" class="editor-modal" style="display: none;">
+    <div class="editor-bar">
+      <span>⚙️ CUSTOM HUD LAYOUT (Drag buttons to position)</span>
+      <div class="editor-actions">
+        <button class="btn-clean" onclick="resetHUD()">Reset</button>
+        <button class="btn-save" onclick="saveHUDLayout()">Save &amp; Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Game Lobby & Mode Selector (Daylight Light Theme) -->
+  <div id="lobbyScreen" class="lobby-wrapper">
+    <div class="lobby-card">
+      <div class="lobby-header">
+        <h1>VORTEX STRIKE</h1>
+        <p>Tactical Arena // Cross-Platform Tactical Shooter</p>
+      </div>
+
+      <div class="mode-selection">
+        <button class="mode-card active" onclick="selectMode('1v1', this)">
+          <div class="mode-name">1 vs 1 Duel</div>
+          <div class="mode-desc">Pure Aim &amp; Reflexes</div>
+        </button>
+        <button class="mode-card" onclick="selectMode('2v2', this)">
+          <div class="mode-name">2 vs 2 Tactical</div>
+          <div class="mode-desc">Co-op Squad Rush</div>
+        </button>
+        <button class="mode-card" onclick="selectMode('4v4', this)">
+          <div class="mode-name">4 vs 4 Deathmatch</div>
+          <div class="mode-desc">Full Arena Warfare</div>
+        </button>
+      </div>
+
+      <div class="lobby-buttons-row">
+        <button class="btn-play" onclick="startGame()">START BATTLE 🚀</button>
+        <button class="btn-secondary" onclick="openHUDEditor()">Edit Mobile HUD 📱</button>
+      </div>
+
+      <div class="lobby-footer-note">
+        <strong>Controls:</strong> PC: [WASD] Move + Mouse Aim + Left Click Shoot | Mobile: Multi-touch on-screen HUD
+      </div>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
